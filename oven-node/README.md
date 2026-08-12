@@ -84,6 +84,157 @@ Kalau langkah 1-8 sudah jalan normal di laptop, baru lanjut deploy ke Railway.
 - App sekecil ini (1 vCPU kecil, RAM di bawah 512MB, volume beberapa MB) biasanya masih masuk dalam kredit $5 tsb kalau trafiknya ringan (1 oven, beberapa user buka dashboard)
 - HiveMQ Cloud Free tier tetap gratis, cukup buat 1 device
 
+## B2. Deploy ke VPS Jagoan Hosting (alternatif ke Railway, akses root penuh)
+
+Kalau Anda pakai VPS sendiri (mis. Jagoan Hosting VPS NextGen Nebula, Ubuntu, akses root via SSH) alih-alih Railway, ikuti urutan ini dari nol sampai app jalan permanen dan auto-restart kalau server reboot.
+
+### 1. Login SSH pertama kali
+
+Dari laptop (Windows: pakai PowerShell/Terminal, atau PuTTY):
+
+```
+ssh root@ALAMAT_IP_VPS_ANDA
+```
+
+- Masukkan password root yang dikirim Jagoan Hosting saat pertama beli VPS
+- Kalau ini login pertama, sebaiknya langsung ganti password root:
+  ```
+  passwd
+  ```
+- Update dulu paket sistem:
+  ```
+  apt update && apt upgrade -y
+  ```
+
+### 2. Install Node.js versi LTS
+
+Pakai NodeSource repository supaya dapat versi LTS terbaru (misal Node 20.x):
+
+```
+curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+apt install -y nodejs
+node -v
+npm -v
+```
+
+Project ini juga butuh `build-essential` dan `python3` karena salah satu dependency (`better-sqlite3`) perlu compile native module:
+
+```
+apt install -y build-essential python3
+```
+
+### 3. Install PM2 (process manager, biar app auto-restart)
+
+```
+npm install -g pm2
+```
+
+### 4. Install Git & clone project dari GitHub
+
+```
+apt install -y git
+cd /var/www
+git clone https://github.com/NagataRafi/FILES-PKM.git
+cd FILES-PKM/oven-node
+```
+
+(Folder project ada di dalam `oven-node/` karena repo GitHub-nya membungkus beberapa project, bukan cuma yang ini.)
+
+### 5. Isi file `.env` di server
+
+File `.env` **tidak ikut ke-clone** dari GitHub (memang sengaja, supaya kredensial tidak bocor). Buat manual di server:
+
+```
+cp .env.example .env
+nano .env
+```
+
+Isi persis seperti waktu testing di laptop:
+- `MQTT_HOST`, `MQTT_PORT`, `MQTT_USER`, `MQTT_PASSWORD` — sama seperti punya ESP32, dari HiveMQ Cloud Console
+- `DASH_USER`, `DASH_PASSWORD` — password buat login dashboard (WAJIB diisi, jangan disebar)
+- `PORT=3000` (biarkan default, Nginx yang akan meneruskan dari port 80/443 ke sini)
+
+Simpan dengan `Ctrl+O`, Enter, lalu keluar dengan `Ctrl+X`.
+
+### 6. Install dependency & jalankan lewat PM2
+
+```
+npm install --omit=dev
+pm2 start ecosystem.config.js
+```
+
+Cek jalan dengan benar:
+
+```
+pm2 status
+pm2 logs oven-dryer-monitor
+```
+
+Harus muncul baris log `Terhubung ke broker MQTT (HiveMQ Cloud)` dan `Oven Dryer Monitor jalan di port 3000`.
+
+### 7. Supaya PM2 auto-start lagi kalau VPS reboot
+
+```
+pm2 save
+pm2 startup
+```
+
+`pm2 startup` akan menampilkan satu baris perintah (biasanya diawali `sudo env PATH=...`) — copy-paste dan jalankan persis seperti yang ditampilkan. Setelah itu, app akan otomatis jalan lagi tiap kali VPS restart, tanpa perlu SSH manual.
+
+### 8. Pasang Nginx sebagai reverse proxy
+
+```
+apt install -y nginx
+cp deploy/nginx-oven.conf /etc/nginx/sites-available/oven-dryer
+nano /etc/nginx/sites-available/oven-dryer
+```
+
+Ganti `ganti-domain-anda.com` dengan domain/subdomain Anda (mis. `oven.domainanda.com`), lalu simpan.
+
+```
+ln -s /etc/nginx/sites-available/oven-dryer /etc/nginx/sites-enabled/
+nginx -t
+systemctl reload nginx
+```
+
+Pastikan juga domain tersebut sudah diarahkan (DNS A record) ke alamat IP VPS ini — biasanya diatur lewat panel domain/DNS provider Anda, bukan di VPS.
+
+Setelah langkah ini, buka `http://domain-anda.com` dari browser — harus sudah bisa masuk ke dashboard (masih HTTP biasa, belum HTTPS).
+
+### 9. Pasang SSL gratis (Let's Encrypt) via Certbot
+
+```
+apt install -y certbot python3-certbot-nginx
+certbot --nginx -d ganti-domain-anda.com
+```
+
+Ikuti pertanyaan interaktifnya (isi email, setuju ToS). Certbot otomatis mengedit konfigurasi Nginx untuk menambahkan HTTPS dan redirect HTTP ke HTTPS. Sertifikat ini juga otomatis diperpanjang sebelum expired (certbot memasang cron/timer sendiri), tidak perlu diurus manual lagi.
+
+Cek dari browser: `https://domain-anda.com` sudah pakai gembok SSL.
+
+### 10. Update aplikasi di kemudian hari
+
+Setiap kali ada perubahan kode baru di GitHub, tinggal jalankan script bantu yang sudah disiapkan:
+
+```
+cd /var/www/FILES-PKM/oven-node
+bash deploy/deploy.sh
+```
+
+Script ini otomatis `git pull`, `npm install --omit=dev`, lalu `pm2 restart`.
+
+### Ringkasan firewall (opsional tapi disarankan)
+
+Kalau Jagoan Hosting menyediakan firewall/UFW dan ingin diaktifkan, minimal buka port SSH, HTTP, HTTPS supaya tidak terkunci dari luar:
+
+```
+ufw allow OpenSSH
+ufw allow 'Nginx Full'
+ufw enable
+```
+
+Port 3000 (app Node.js) **tidak perlu** dibuka ke publik — cukup diakses lewat Nginx di 80/443, karena `proxy_pass` di Nginx mengaksesnya lewat `127.0.0.1:3000` (localhost saja).
+
 ## C. Cara pakai dashboard
 
 - **Kartu atas**: suhu TC1/TC2 realtime, status motor, status emergency, sisa timer — update otomatis tiap ada data baru dari ESP32, tanpa refresh
