@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Oven Dryer Monitor</title>
+<link rel="stylesheet" href="/style.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-date-fns/3.0.0/chartjs-adapter-date-fns.bundle.min.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Oven Dryer Monitor</h1>
+    <span id="conn-badge" class="badge offline">Menghubungkan...</span>
+  </header>
+
+  <main>
+    <section class="cards">
+      <div class="card">
+        <div class="card-label">Suhu TC1</div>
+        <div class="card-value" id="tc1-pv">--</div>
+        <div class="card-sub">Setpoint: <span id="tc1-sv">--</span> °C</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Suhu TC2</div>
+        <div class="card-value" id="tc2-pv">--</div>
+        <div class="card-sub">Setpoint: <span id="tc2-sv">--</span> °C</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Status Motor</div>
+        <div class="card-value" id="motor-status">--</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Emergency</div>
+        <div class="card-value" id="emergency-status">--</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Sisa Timer</div>
+        <div class="card-value" id="timer-remaining">--</div>
+      </div>
+    </section>
+
+    <section class="chart-panel">
+      <div class="chart-header">
+        <h2>Grafik Suhu vs Setpoint</h2>
+        <select id="range-select">
+          <option value="1">1 jam</option>
+          <option value="6" selected>6 jam</option>
+          <option value="24">24 jam</option>
+          <option value="168">7 hari</option>
+        </select>
+      </div>
+      <canvas id="tempChart" height="90"></canvas>
+    </section>
+
+    <section class="control-panel">
+      <h2>Kontrol</h2>
+
+      <div class="control-row">
+        <div class="control-group">
+          <label>Setpoint TC1 (°C)</label>
+          <input type="number" id="input-sv1" min="0" max="300" step="1" />
+          <button onclick="sendSetpoint('tc1')">Kirim</button>
+        </div>
+        <div class="control-group">
+          <label>Setpoint TC2 (°C)</label>
+          <input type="number" id="input-sv2" min="0" max="300" step="1" />
+          <button onclick="sendSetpoint('tc2')">Kirim</button>
+        </div>
+      </div>
+
+      <div class="control-row">
+        <div class="control-group">
+          <label>Durasi Timer (menit)</label>
+          <input type="number" id="input-timer" min="1" max="480" step="1" value="30" />
+          <button onclick="sendTimer()">Set Timer</button>
+        </div>
+        <div class="control-group">
+          <label>Mesin</label>
+          <div class="button-row">
+            <button class="btn-start" onclick="sendControl('START')">START</button>
+            <button class="btn-stop" onclick="sendControl('STOP')">STOP</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="toast" class="toast"></div>
+    </section>
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/dashboard.js"></script>
+</body>
+</html>

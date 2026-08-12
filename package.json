@@ -1,0 +1,21 @@
+{
+  "name": "oven-dryer-monitor",
+  "version": "1.0.0",
+  "description": "Monitoring & kontrol oven dryer (TK4S + ESP32) - Node.js all-in-one, ganti Grafana/InfluxDB/Node-RED",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.3.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-basic-auth": "^1.2.1",
+    "mqtt": "^5.10.1",
+    "socket.io": "^4.7.5"
+  }
+}
