@@ -104,7 +104,7 @@ const mqttClient = mqtt.connect(`mqtts://${MQTT_HOST}:${MQTT_PORT}`, {
 });
 
 mqttClient.on("connect", () => {
-  console.log("Terhubung ke broker MQTT (HiveMQ Cloud)");
+  console.log("Terhubung ke broker MQTT: " + MQTT_HOST);
   mqttClient.subscribe(TOPIC_STATUS, (err) => {
     if (err) console.error("Gagal subscribe oven/status:", err.message);
   });

@@ -149,12 +149,8 @@ select, input[type="number"] {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  flex: 1;
+  flex: 1 1 200px;
   min-width: 160px;
-}
-
-.control-row .control-group:only-child {
-  flex: 0 1 240px;
 }
 
 .control-group label {

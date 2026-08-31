@@ -1,9 +1,9 @@
 # Oven Dryer Monitor — Node.js + VPS
 
-Sistem baru, lebih simpel: 1 aplikasi Node.js gantiin Grafana + InfluxDB + Telegraf + Node-RED. Broker MQTT tetap HiveMQ Cloud. ESP32 dan alert Telegram **tidak berubah** dari sebelumnya.
+Sistem baru, lebih simpel: 1 aplikasi Node.js gantiin Grafana + InfluxDB + Telegraf + Node-RED. Broker MQTT sekarang EMQX Cloud Serverless. ESP32 dan alert Telegram **tidak berubah** dari sebelumnya.
 
 ```
-ESP32 (Modbus RTU ke TK4S) --MQTT (TLS)--> HiveMQ Cloud --MQTT--> Node.js app
+ESP32 (Modbus RTU ke TK4S) --MQTT (TLS)--> EMQX Cloud Serverless --MQTT--> Node.js app
                                                                      |  |
                                                                 SQLite  Dashboard web
                                                              (histori) (realtime + kontrol)
@@ -25,14 +25,14 @@ ESP32 (Modbus RTU ke TK4S) --MQTT (TLS)--> HiveMQ Cloud --MQTT--> Node.js app
    cp .env.example .env
    ```
 5. Buka `.env`, isi:
-   - `MQTT_HOST`, `MQTT_USER`, `MQTT_PASSWORD` — sama seperti yang dipakai ESP32, dari HiveMQ Cloud Console
+   - `MQTT_HOST`, `MQTT_USER`, `MQTT_PASSWORD` — sama seperti yang dipakai ESP32, dari EMQX Cloud Console
    - `DASH_USER`, `DASH_PASSWORD` — bikin sendiri, ini password buat buka dashboard (WAJIB, dashboard bisa START/STOP mesin)
 6. Jalankan:
    ```
    npm start
    ```
 7. Buka browser ke `http://localhost:3000`, browser akan minta username/password (isi sesuai `DASH_USER`/`DASH_PASSWORD`)
-8. Kalau ESP32 sudah nyala dan publish ke HiveMQ, data suhu langsung muncul realtime di dashboard
+8. Kalau ESP32 sudah nyala dan publish ke EMQX, data suhu langsung muncul realtime di dashboard
 
 Kalau langkah 1-8 sudah jalan normal di laptop, baru lanjut deploy ke VPS.
 
@@ -102,7 +102,7 @@ nano .env
 ```
 
 Isi persis seperti waktu testing di laptop:
-- `MQTT_HOST`, `MQTT_PORT`, `MQTT_USER`, `MQTT_PASSWORD` — sama seperti punya ESP32, dari HiveMQ Cloud Console
+- `MQTT_HOST`, `MQTT_PORT`, `MQTT_USER`, `MQTT_PASSWORD` — sama seperti punya ESP32, dari EMQX Cloud Console
 - `DASH_USER`, `DASH_PASSWORD` — password buat login dashboard (WAJIB diisi, jangan disebar)
 - `PORT=3000` (biarkan default, Nginx yang akan meneruskan dari port 80/443 ke sini)
 
@@ -122,7 +122,7 @@ pm2 status
 pm2 logs oven-dryer-monitor
 ```
 
-Harus muncul baris log `Terhubung ke broker MQTT (HiveMQ Cloud)` dan `Oven Dryer Monitor jalan di port 3000`.
+Harus muncul baris log `Terhubung ke broker MQTT: xxxxxxxx.ala.asia-southeast1.emqxsl.com` (sesuai `MQTT_HOST` di `.env`) dan `Oven Dryer Monitor jalan di port 3000`.
 
 ### 7. Supaya PM2 auto-start lagi kalau VPS reboot
 
@@ -180,7 +180,7 @@ Script ini otomatis `git pull`, `npm install --omit=dev`, lalu `pm2 restart`.
 - VPS Jagoan Hosting paket **NextGen Nebula**: mulai **Rp100.000/bulan** — 2 core CPU, 2GB RAM, 40GB storage
 - Bisa dibayar per siklus bulanan, 3 bulan, 6 bulan, atau tahunan; harga perpanjangan sama dengan harga awal (tidak naik)
 - App sekecil ini (1 vCPU, RAM di bawah 512MB, database SQLite beberapa MB) jauh di bawah kapasitas paket Nebula, jadi masih longgar buat nambah project lain di VPS yang sama kalau perlu
-- HiveMQ Cloud Free tier tetap gratis, cukup buat 1 device
+- EMQX Cloud Serverless: kuota gratis 1 juta session-minutes + 1 GB traffic per bulan, cukup buat 1 device seperti proyek ini — set Spend Limit ke 0 di EMQX Cloud Console supaya tidak pernah ke-charge kalau kuota gratis terlampaui
 - Domain (kalau belum punya) beli terpisah, biasanya Rp15.000–Rp150.000/tahun tergantung ekstensi; sertifikat SSL dari Let's Encrypt via Certbot **gratis**
 
 ### Ringkasan firewall (opsional tapi disarankan)
@@ -210,7 +210,7 @@ Port 3000 (app Node.js) **tidak perlu** dibuka ke publik — cukup diakses lewat
 Dashboard kebuka tapi data suhu tidak muncul
 - Cek isi file `.env` di server (folder `oven-node`, lihat langkah B.5) — `MQTT_HOST`/`MQTT_USER`/`MQTT_PASSWORD` harus sama persis dengan yang dipakai ESP32
 - Cek log PM2: `pm2 logs oven-dryer-monitor`, harus ada baris "Terhubung ke broker MQTT"
-- Pastikan ESP32 memang publish ke topik `oven/status`, cek HiveMQ Cloud Console > Web Client buat lihat traffic langsung
+- Pastikan ESP32 memang publish ke topik `oven/status`, cek EMQX Cloud Console > Monitor atau Connections untuk lihat traffic langsung
 
 Histori grafik hilang
 - Berarti file `oven.db` di server ke-hapus atau `DB_PATH` di `.env` berubah-ubah. Selama folder project di VPS tidak dihapus/dipindah dan `DB_PATH` tidak diubah, histori tersimpan permanen di disk VPS (beda dari hosting yang filesystem-nya di-reset tiap deploy)
@@ -220,7 +220,7 @@ Browser minta username/password terus tidak bisa masuk
 - Cek `DASH_USER`/`DASH_PASSWORD` di file `.env` di server, harus sama persis (case-sensitive) dengan yang diketik, lalu `pm2 restart oven-dryer-monitor --update-env` setelah ubah `.env`
 
 Setpoint/timer/start-stop tidak direspon mesin
-- Cek ESP32 masih konek ke HiveMQ (lihat serial monitor ESP32 atau HiveMQ Web Client)
+- Cek ESP32 masih konek ke EMQX (lihat serial monitor ESP32 atau EMQX Cloud Console > Connections)
 - Cek watchdog ESP32 tidak lagi fail-safe (motor mati otomatis kalau MQTT putus >15 detik)
 
 Error waktu `npm install` soal `better-sqlite3`
