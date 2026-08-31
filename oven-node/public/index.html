@@ -17,14 +17,14 @@
   <main>
     <section class="cards">
       <div class="card">
-        <div class="card-label">Suhu TC1</div>
-        <div class="card-value" id="tc1-pv">--</div>
-        <div class="card-sub">Setpoint: <span id="tc1-sv">--</span> °C</div>
-      </div>
-      <div class="card">
-        <div class="card-label">Suhu TC2</div>
+        <div class="card-label">TEMP TABUNG (C)</div>
         <div class="card-value" id="tc2-pv">--</div>
         <div class="card-sub">Setpoint: <span id="tc2-sv">--</span> °C</div>
+      </div>
+      <div class="card">
+        <div class="card-label">TEMP HEATER (C)</div>
+        <div class="card-value" id="tc1-pv">--</div>
+        <div class="card-sub">Setpoint: <span id="tc1-sv">--</span> °C</div>
       </div>
       <div class="card">
         <div class="card-label">Status Motor</div>
@@ -58,12 +58,7 @@
 
       <div class="control-row">
         <div class="control-group">
-          <label>Setpoint TC1 (°C)</label>
-          <input type="number" id="input-sv1" min="0" max="300" step="1" />
-          <button onclick="sendSetpoint('tc1')">Kirim</button>
-        </div>
-        <div class="control-group">
-          <label>Setpoint TC2 (°C)</label>
+          <label>TEMP TABUNG (C)</label>
           <input type="number" id="input-sv2" min="0" max="300" step="1" />
           <button onclick="sendSetpoint('tc2')">Kirim</button>
         </div>

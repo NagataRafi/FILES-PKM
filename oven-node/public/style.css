@@ -153,6 +153,10 @@ select, input[type="number"] {
   min-width: 160px;
 }
 
+.control-row .control-group:only-child {
+  flex: 0 1 240px;
+}
+
 .control-group label {
   font-size: 12px;
   color: var(--text-dim);
